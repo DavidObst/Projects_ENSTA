@@ -1,5 +1,5 @@
 function [x1,diff,ordre_k] = fct_multi(x,a,N)  
-% 
+%%
 u_tild = zeros(1,N);
 expo = zeros(1,N);
 alpha = zeros(1,N);
@@ -34,3 +34,4 @@ for j=1:size(a,2)
   end
 end
 diff = kk;
+

@@ -1,5 +1,4 @@
 function [xi_sir,w]= SIR(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS,T,N,map,h_ALT)
-
 %% Initialisation%%
 
     xi_sir = zeros(4,N,T);

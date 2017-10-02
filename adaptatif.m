@@ -41,7 +41,9 @@ function [xi_adapt,w]= adaptatif(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_I
             end
             
         else
+                xi_hat=xi_adapt(:,:,t-1);    
             for i=1:N
+
                 dr = xi_hat(1:2,i) - r_INS(:,t-1);
                 dv = xi_hat(3:4,i) - v_INS(:,t-1);
 

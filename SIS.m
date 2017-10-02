@@ -10,8 +10,9 @@ function [xi_sis,w]= SIS(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS
     end
         
     for t=2:T
-                
+        xi_hat=xi_sis(:,:,t-1);    
         for i=1:N
+            
             dr = xi_hat(1:2,i) - r_INS(:,t-1);
             dv = xi_hat(3:4,i) - v_INS(:,t-1);
             
@@ -29,7 +30,7 @@ function [xi_sis,w]= SIS(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS
             w(i,t) = w(i,t-1)*gaussien(h_ALT(t),map(x,y),sigma_BAR^2+sigma_ALT^2);
         end
         
-        s = sum(w(:,t-1));
+        s = sum(w(:,t));
         w(:,t) = w(:,t)/s;
     end
 end
