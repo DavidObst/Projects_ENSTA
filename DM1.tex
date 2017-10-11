@@ -1,0 +1,224 @@
+\documentclass[paper=a4, fontsize=11pt]{scrartcl} % A4 paper and 11pt font size
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+\usepackage{fourier} % Use the Adobe Utopia font for the document - comment this line to return to the LaTeX default
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage{hyperref}
+
+
+\usepackage{sectsty} % Allows customizing section commands
+\allsectionsfont{\centering \normalfont\scshape} % Make all sections centered, the default font and small caps
+
+\usepackage{fancyhdr} % Custom headers and footers
+\pagestyle{fancyplain} % Makes all pages in the document conform to the custom headers and footers
+\fancyhead{} % No page header - if you want one, create it in the same way as the footers below
+\fancyfoot[L]{} % Empty left footer
+\fancyfoot[C]{} % Empty center footer
+\fancyfoot[R]{\thepage} % Page numbering for right footer
+\renewcommand{\headrulewidth}{0pt} % Remove header underlines
+\renewcommand{\footrulewidth}{0pt} % Remove footer underline
+
+\setlength{\headheight}{13.6pt} % Customize the height of the header
+
+\numberwithin{equation}{section} % Number equations within sections (i.e. 1.1, 1.2, 2.1, 2.2 instead of 1, 2, 3, 4)
+\numberwithin{figure}{section} % Number figures within sections (i.e. 1.1, 1.2, 2.1, 2.2 instead of 1, 2, 3, 4)
+\numberwithin{table}{section} % Number tables within sections (i.e. 1.1, 1.2, 2.1, 2.2 instead of 1, 2, 3, 4)
+
+\setlength\parindent{0pt} % Removes all indentation from paragraphs - comment this line for an assignment with lots of text
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{tikz,tkz-tab}
+\usetikzlibrary{datavisualization}
+\usetikzlibrary{datavisualization.formats.functions}
+\usepackage[a4paper,body=170mm,textheight=250mm]{geometry}
+\usepackage{cases}
+\newcommand{\ssi}{\Leftrightarrow}
+%\newcommand{\N}{\mathbb{N}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\M}{\mathbb{M}}
+\newcommand{\K}{\mathbb{K}}
+\usepackage{listings}
+\newcommand{\Lap}{\mathop{}\!\mathbin\bigtriangleup}
+\newcommand{\partielles}[2]{\dfrac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\norm}[1]{\left\rVert #1 \right\rVert}
+\newcommand{\integrale}[1]{\int_\Omega #1 \: \text{d} \Omega}
+\newcommand{\grad}{\overrightarrow{\nabla}}
+\newcommand{\arrow}{\overrightarrow}
+\newcommand{\ps}[2]{\big\langle #1 , #2 \big \rangle}
+\renewcommand{\triangle}{\bigtriangleup}
+%\setlength{\parindent}{0pt}
+\usepackage{enumitem}
+\usepackage{pifont}
+\usetikzlibrary{trees}
+\newcommand{\EE}[1]{\mathbb{E}\big[ #1 \big]}
+\usepackage{bm}
+
+ \usepackage[usenames,dvipsnames]{pstricks}
+ \usepackage{epsfig}
+ \usepackage{pst-grad} % For gradients
+ \usepackage{pst-plot} % For axes
+ \usepackage[space]{grffile} % For spaces in paths
+ \usepackage{etoolbox} % For spaces in paths
+ \makeatletter % For spaces in paths
+ \patchcmd\Gread@eps{\@inputcheck#1 }{\@inputcheck"#1"\relax}{}{}
+
+\usepackage{enumitem}
+\usepackage{refcount}
+\newcounter{count}
+
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\N}{\mathcal{N}}
+\renewcommand{\sl}{\sigma_\lambda}
+\newcommand{\sd}{\sigma_\mathcal{D}}
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}} % Create horizontal rule command with 1 argument of height
+
+\title{	
+\normalfont \normalsize 
+\textsc{Universite Paris-Saclay - Introduction to Graphical Models} \\ [25pt] % Your university, school and/or department name(s)
+\horrule{0.5pt} \\[0.4cm] % Thin top horizontal rule
+\huge Homework 1 \\ % The assignment title
+\horrule{2pt} \\[0.5cm] % Thick bottom horizontal rule
+}
+
+\author{David Obst} % Your name
+
+\date{\normalsize\today} % Today's date or a custom date
+
+\begin{document}
+
+\maketitle
+
+\section{Bayes rule}
+
+Let $\lambda$ and $\D$ two scalar random variables with $p(\lambda) = \N(\lambda,0,\sl^2)$ and $p(\D | \lambda) = \N(\D,\lambda,\sd^2)$ be. The goal is to determine the posterior distribution $p(\lambda | \D)$. \\
+
+Following the Bayes' rule one has:
+
+$$\begin{array}{ccl}
+
+p(\lambda | \D) & = & \dfrac{p(\D | \lambda) p(\lambda)}{p(\D)} \\
+				\\
+				& \propto & p(\D | \lambda) p(\lambda) \quad \text{with the evidence being only a normalization constant} \\
+
+\end{array}$$
+
+And 
+
+$$\begin{cases}
+	p(\lambda) = \dfrac{1}{\sqrt{2\pi \sl^2}} \exp \big\{ - \dfrac{\lambda^2}{2 \sl^2} \big\} \\
+	p(\D | \lambda) = \dfrac{1}{\sqrt{2\pi \sd^2}} \exp \big\{ - \dfrac{(\D -\lambda)^2}{2 \sd^2} \big\} 
+\end{cases}$$
+
+Therefore by continuing the previous calculation one has:
+
+\begin{equation}
+p(\lambda | \D) \propto  \dfrac{1}{\sqrt{(2\pi)^2\sd^2 \sl^2}} \exp \Big( \dfrac{-1}{2} \big( \dfrac{(\D - \lambda)^2}{\sd^2} + \dfrac{\lambda^2}{\sl^2} \big) \Big)
+\label{eq1}
+\end{equation}
+
+
+Let $T(\D,\lambda) = \dfrac{(\D - \lambda)^2}{\sd^2} + \dfrac{\lambda^2}{\sl^2} $ be the inner term of the exponential (without the factor $-1/2$). Then by developping it is rewritten: \\
+
+$
+\begin{array}{ccl}
+
+T(\D,\lambda) & = & \dfrac{\D^2 - 2\lambda \D + \lambda^2}{\sd^2} + \dfrac{\lambda^2}{\sl^2} \\
+\\
+			  & = & \Big( \dfrac{1}{\sd^2} + \dfrac{1}{\sl^2} \Big) \lambda^2 - \dfrac{2 \D}{\sd^2} \lambda + \dfrac{1}{\sd^2} \D
+
+\end{array}
+$
+
+Let $\sigma$ defined by $\dfrac{1}{\sigma^2} = \dfrac{1}{\sd^2} + \dfrac{1}{\sl^2} $ be. Continuining the calculations yields:
+
+$
+\begin{array}{ccl}
+
+T(\D,\lambda) & = & \dfrac{1}{\sigma^2} \lambda - 2 \dfrac{\D}{\sd^2} \lambda + \dfrac{\sigma^2}{\sd^2} d^2 \\
+\\
+  & = & \dfrac{1}{\sigma^2} \Big( \lambda - \dfrac{\sigma}{\sd} \D \Big)^2 - \dfrac{\D}{\sd^2}
+
+\end{array}
+$
+
+Consequently, replacing this form in \ref{eq1} yields:
+
+$
+\begin{array}{ccl}
+
+p(\lambda | \D) & \propto & \dfrac{1}{\sqrt{(2\pi)^2 \sd^2 \sl^2}} \exp \Big( -\dfrac{1}{2\sigma^2} \big( \lambda - \dfrac{\sigma}{\sd} \D \big)^2 \Big) \exp \big( \dfrac{\D}{2 \sd^2} \big)
+
+\end{array}
+$
+
+Therefore we have 
+
+\begin{equation}
+	p(\lambda | \D) \propto \exp \Big( - \dfrac{1}{2 \sigma^2} \big( \lambda - \dfrac{\sigma}{\sd} \D \big)^2 \Big)
+\end{equation}
+
+Therefore the posterior $\lambda | \D$ follows a normal distribution:
+
+\begin{equation}
+\boxed{p(\lambda | \D) = \N(\mu',\sigma'^2) \quad \text{with} \quad \begin{cases}
+	\mu' = \dfrac{\sl}{\sqrt{\sd^2 + \sl^2}} \D\\
+	\\
+	\sigma'^2 = \dfrac{\sd^2 \sl^2}{\sd^2 + \sl^2}
+\end{cases} } 
+\end{equation}
+
+\bigskip
+
+\section{Graphical Models}
+
+\begin{list}{\textbf{Question \arabic{count} -}}{\usecounter{count}}
+	\item The Directed Acyclic Graph (DAG) is obtained by reading the factorization of the joint distribution.
+\end{list}
+
+\begin{figure}[h]
+\centering
+\psscalebox{1.0 1.0} % Change this value to rescale the drawing.
+{
+\begin{pspicture}(0,-5.8)(11.2,5.8)
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](0.8,5.0){0.8}
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](10.4,5.0){0.8}
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](0.8,1.8){0.8}
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](5.6,1.8){0.8}
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](10.4,1.8){0.8}
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(0.8,4.2)(0.8,2.6)
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(10.4,4.2)(10.4,2.6)
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](3.2,-1.8){0.8}
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](10.4,-1.8){0.8}
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(4.0,-1.8)(9.6,-1.8)
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(3.2,-2.6)(3.2,-4.2)
+\pscircle[linecolor=black, linewidth=0.04, dimen=outer](3.2,-5.0){0.8}
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(10.4,1.0)(10.4,-1.0)
+\rput[bl](0.56,4.78){\huge A}
+\rput[bl](0.58,1.6){\huge T}
+\rput[bl](10.08,4.74){\huge M}
+\rput[bl](5.44,1.58){\huge L}
+\rput[bl](10.18,1.56){\huge B}
+\rput[bl](10.2,-2.04){\huge D}
+\rput[bl](3.04,-2.0){\huge F}
+\rput[bl](2.96,-5.22){\huge X}
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(5.6,1.0)(3.6,-1.0)
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(0.8,1.0)(2.8,-1.0)
+\psline[linecolor=black, linewidth=0.04, arrowsize=0.05291667cm 2.0,arrowlength=1.4,arrowinset=0.0]{->}(9.76,4.52)(6.3,2.2)
+\end{pspicture}
+}
+\caption{Question 1: DAG of the distribution}
+\end{figure}
+
+
+\end{document}
