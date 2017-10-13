@@ -1,239 +1,162 @@
 clear
 
-%% Parameters for the display of the map %%
-X1MIN = -10^4;
-X1MAX = 10^4;
-X2MIN = -10^4;
-X2MAX = 10^4;
+N = 300; %% Nombre de particules
+Nb = 10;
+lambda = 20;
+%c = [500,200,2];
+%c = [300,400,100];
+c = [300,400,100];
 
-%% Other Parameters %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-r_0 = [-6000,-2000];
-v_0 = [120,0];
-sigma_r0 = 100;
-sigma_v0 = 10 ;
-sigma_INS = 7;
-sigma_ALT = 10;
-sigma_BAR = 20;
-T = 100;
-delta = 1;
+SEQUENCE = './seq2/';
+START = 1;
+% charge le nom des images de la sequence
+filenames = dir([SEQUENCE '*.png']);
+filenames = sort({filenames.name});
+T = length(filenames);
+% charge la premiere image dans 'im'
+tt = START;
+im = imread([SEQUENCE filenames{tt}]);
+% affiche 'im'
+figure;
+set(gcf,'DoubleBuffer','on');
+imagesc(im);
 
-%% Load the map %%
-map = load('nct/mnt.data');
-[N1 N2] = size(map);
-
-imagesc([X1MIN X1MAX],[X2MIN X2MAX],transpose(map));
-hold on;
-colormap('default');
-axis square;
-axis off;
-
-%% Load real trajectory r_k and plot it on the map%%
-load('nct/traj.mat','rtrue','vtrue');
-nmax = size(rtrue,2);
-
-plot(rtrue(1,:),rtrue(2,:),'r-');
-
-%% Load acceleration measures from inertial system %%
-load('nct/ins.mat','a_INS');
-
-
-%% Plot of the trajectory estimated using INS measures only %%
-r_INS(:,1) = r_0; v_INS(:,1) = v_0; % initialisation
-for n=2:nmax
-    r_INS(:,n) = r_INS(:,n-1)+delta*v_INS(:,n-1);
-    v_INS(:,n) = v_INS(:,n-1)+delta*a_INS(:,n-1);
+disp('Cliquer 4 points dans l''image pour definir la zone a suivre.');
+% on recupere la zone a tracker
+zone = zeros(2,4);
+compteur=1;
+while(compteur ~= 5)
+    [x,y,button] = ginput(1);
+    zone(1,compteur) = x;
+    zone(2,compteur) = y;
+    text(x,y,'X','Color','r');
+    compteur = compteur+1;
 end
-plot(r_INS(1,:),r_INS(2,:),'m-');
+newzone = zeros(2,4);
+newzone(1,:) = sort(zone(1,:));
+newzone(2,:) = sort(zone(2,:));
+% definition de la zone a tracker
+% x haut gauche, y haut gauche, largeur, hauteur
+zoneAT = zeros(1,4);
+zoneAT(1) = newzone(1,1);
+zoneAT(2) = newzone(2,1);
+zoneAT(3) = newzone(1,4)-newzone(1,1);
+zoneAT(4) = newzone(2,4)-newzone(2,1);
+% affichage du rectangle
+rectangle('Position',zoneAT,'EdgeColor','r','LineWidth',3);
+ 
+littleim = imcrop(im,zoneAT(1:4));
+[tmp,Cmap] = rgb2ind(littleim,Nb,'nodither');
+littleim = rgb2ind(littleim,Cmap,'nodither');
+histoRef = imhist(littleim,Cmap);
+histoRef = histoRef/sum(histoRef);
 
-%% Plot du relief
-figure
-load('nct/alt.mat');
-plot(h_ALT,'+');
-r_true_ij=rtrue;
-r_true_ij(1,:)=floor((N1/(2*X1MAX))*rtrue(1,:)-((N1/(2*X1MAX))*X1MIN));
-r_true_ij(2,:)=floor((N2/(2*X2MAX))*rtrue(2,:)-((N2/(2*X2MAX))*X2MIN));
-figure
-plot(0:T,h_ALT,'+r',0:T,map(r_true_ij(1,:),r_true_ij(2,:)),'b')
-%plot(0:T,map(r_true_ij(1,:),r_true_ij(2,:)),'b')
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Testes SIR
-N = 2000;
-[swag,swag2] = SIR(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS,T,N,map,h_ALT);
+%%% Initialization of C %%%
+C = diag(c);
 
-test_hat = zeros(4,T);
+ %% Init des particules %%
+ Id = eye([3,3]);
+ sigma0 = 0.2;
+ %pos0 = [zoneAT(1) + zoneAT(3)/2; zoneAT(2)-zoneAT(4)/2]; %% Prendre le centre du rectangle
+ rect0 = zeros(4,2);
+ rect0(1,:) = [zoneAT(1),zoneAT(2)];
+ rect0(2,:) = [zoneAT(1)+zoneAT(3),zoneAT(2)];
+ rect0(3,:) = [zoneAT(1),zoneAT(2)+zoneAT(4)];
+ rect0(4,:) = [zoneAT(1)+zoneAT(3),zoneAT(2)+zoneAT(4)];
+ pos0 = 0.5*(rect0(1,:) + rect0(4,:));
+ pos0 = pos0';
 
-for t=1:T
-   test_hat(:,t) = swag(:,:,t)*swag2(:,t); 
-end
+ 
+ s0 = 100; %% Pourcentage initial
+ 
+ %% Coordonees : [x,y,s] %%
+ %X0 = normrnd([pos0,s0],sigma0,[3,N]);
+ X0 = [pos0;s0];
+ Xi_k = zeros(3,N,T);
+ Xi_k(:,:,1) = mvnrnd(X0,sigma0*Id,N)';
+ w = (1/N)*ones(N,T); %% Poids uniformes intialement
+ zone_tt = zeros(T,N,4);
+ zone_hat = zeros(T,4);
 
-imagesc([X1MIN X1MAX],[X2MIN X2MAX],transpose(map));
-hold on;
-colormap('default');
-axis square;
-axis off;
-
-plot(rtrue(1,:),rtrue(2,:),'r-');
-plot(test_hat(1,:),test_hat(2,:),'b');
-
-%% Testes SIS
-N = 2000;
-[swag,swag2] = SIS(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS,T,N,map,h_ALT);
-
-test_hat = zeros(4,T);
-
-for t=1:T
-   test_hat(:,t) = swag(:,:,t)*swag2(:,t); 
-end
-
-
-imagesc([X1MIN X1MAX],[X2MIN X2MAX],transpose(map));
-hold on;
-colormap('default');
-axis square;
-axis off;
-
-plot(rtrue(1,:),rtrue(2,:),'r-');
-plot(test_hat(1,:),test_hat(2,:),'b');
-%% Test adaptatif
-N = 2000;
-c=.5;
-[swag,swag2] = adaptatif(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS,T,N,map,h_ALT,c);
-
-test_hat3 = zeros(4,T);
-
-for t=1:T
-   test_hat3(:,t) = swag(:,:,t)*swag2(:,t); 
-end
-
-imagesc([X1MIN X1MAX],[X2MIN X2MAX],transpose(map));
-hold on;
-colormap('default');
-axis square;
-axis off;
-
-plot(rtrue(1,:),rtrue(2,:),'r-');
-plot(test_hat3(1,:),test_hat3(2,:),'b');
-
-%% error tests SIR
-
-N_set = [100:20:500,550:50:1000,5000];
-N_essaie=50;
-e_SIR=zeros(length(N_set),N_essaie);
-e_mean_SIR=zeros(1,length(N_set));
-e_var_SIR=zeros(1,length(N_set));
-seed=rng;
-for i=1:length(N_set)
-    N=N_set(i);
-    rng(seed); %set back to the same random queue 
-    for j=1:N_essaie
-        [swag,swag2] = SIR(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS,T,N,map,h_ALT);
-
-        test_hat = zeros(4,T);
-
-        for t=1:T
-           test_hat(:,t) = swag(:,:,t)*swag2(:,t); 
-        end
-
-        rhat=test_hat(1:2,:);
-        e_SIR(i,j)=error_pred( rtrue,rhat,T );
-    end
-    e_mean_SIR(i)=sum(e_SIR(i,:))/N_essaie; 
-    e_var_SIR(i)=dot(e_SIR(i,:)-e_mean_SIR(i),e_SIR(i,:)-e_mean_SIR(i))/N_essaie;
-end
-
-%dans nct, j'ai ajouté les matrices des experiences avec N_essaye=50,
-load('nct/e_SIR.mat');
-for i=1:l
-    e_mean_SIR(i)=sum(e_SIR(i,:))/N_essaie; 
-    e_var_SIR(i)=dot(e_SIR(i,:)-e_mean_SIR(i),e_SIR(i,:)-e_mean_SIR(i))/N_essaie;
-end
-
-%l=length(N_set)+1; %full N_set
-l=length(N_set); %doesn't show the N=5000 point
-plot(N_set(1:l-1),e_mean_SIR(1:l-1),'b',...
-    N_set(1:l-1),(e_mean_SIR(1:l-1)-(1.96*sqrt(e_var_SIR(1:l-1)/N_essaie))),'--r',...
-    N_set(1:l-1),e_mean_SIR(1:l-1)+(1.96*sqrt(e_var_SIR(1:l-1)/N_essaie)),'--r');
-
-%% error tests SIS
-
-N_set = [100:20:500,550:50:1000,5000];
-N_essaie=50;
-e_SIS=zeros(length(N_set),N_essaie);
-e_mean_SIS=zeros(1,length(N_set));
-e_var_SIS=zeros(1,length(N_set));
-seed=rng;
-for i=1:length(N_set)
-    N=N_set(i);
-    rng(seed); %set back to the same random queue 
-    for j=1:N_essaie
-        [swag,swag2] = SIS(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS,T,N,map,h_ALT);
+ pos_hat = zeros(T,3);
+ rect_hat = zeros(T,1);
+ 
+ for i=1:N
+     zone_tt(1,i,:) = zoneAT;
+ end
+ 
+ 
+ %u0 =  rect0(1,:) - pos0';
+ %v0 = rect0(2,:) - pos0';
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+  
+ while tt<T %%Tant que le film n est pas termine
+     tt = tt+1;
+	 
+	 %% Lecture de l'image
+	 im = imread([SEQUENCE filenames{tt}]);
+     
+	Xi_tempo = fct_multi(Xi_k(:,:,tt-1),w(:,tt-1)',N);
+    
+	%% Update at step k %%
+     
+     for i=1:N
+         
+        U = mvnrnd([0,0,0],C);
+        Xi_k(:,i,tt) = Xi_tempo(:,i) + U';
         
-        test_hat = zeros(4,T);
+        zone_tt(tt,i,:) = transforme(zoneAT,X0',Xi_k(:,i,tt)');
+        
+        
+        impart = imcrop(im,zone_tt(tt,i,:));
+         impart = rgb2ind(impart,Cmap,'nodither');
+         histo = imhist(impart,Cmap);
+         histo = histo/sum(histo);
+         
+         if isempty(impart) %% If particle out of screen : set its weight to 0
+             w(i,tt) = 0;
+         else
+             w(i,tt) = vraisemblance(histoRef,histo,lambda);
+         end
+         
+         
+         %imagesc(im);
+         
+        
+     end
+     
+     %pos_hat(tt,1:2) =  Xi_k(1:2,:,tt)'*w(1:2,tt);
+     
+     
+     %rectangle('Position',zone_tt(tt,i,:),'EdgeColor','r','LineWidth',3);
+     %figure;
+     %set(gcf,'DoubleBuffer','on');
+     %imagesc(im);
+     
+     w(:,tt) = w(:,tt)/sum(w(:,tt));
+     
+     pos_hat(tt,1) = Xi_k(1,:,tt)*w(:,tt) ;
+     pos_hat(tt,2) = Xi_k(2,:,tt)*w(:,tt) ;
+     pos_hat(tt,3) = Xi_k(3,:,tt)*w(:,tt) ;
+     
+     zone_hat(tt,:) = transforme(zoneAT,X0',pos_hat(tt,:));
+     
+     %figure
+     clf;
+     imagesc(im)
+     hold on
+    %scatter(pos_hat(tt,1),pos_hat(tt,2));
+    scatter(Xi_k(1,:,tt),Xi_k(2,:,tt));
+    
+    rectangle('Position',zone_hat(tt,:),'EdgeColor','r','LineWidth',3);
+    %for i=1:N
+     %   rectangle('Position',zone_tt(tt,i,:),'EdgeColor','blue','LineWidth',1);
+    %end
+    drawnow;
 
-        for t=1:T
-           test_hat(:,t) = swag(:,:,t)*swag2(:,t); 
-        end
-
-        rhat=test_hat(1:2,:);
-        e_SIS(i,j)=error_pred( rtrue,rhat,T );
-    end
-    e_mean_SIS(i)=sum(e_SIS(i,:))/N_essaie;
-    e_var_SIS(i)=dot(e_SIS(i,:)-e_mean_SIS(i),e_SIS(i,:)-e_mean_SIS(i))/N_essaie;
-end
-
-%dans nct, j'ai ajouté les matrices des experiences avec N_essaye=50,
-load('nct/e_SIS.mat');
-for i=1:l
-    e_mean_SIS(i)=sum(e_SIS(i,:))/N_essaie; 
-    e_var_SIS(i)=dot(e_SIS(i,:)-e_mean_SIS(i),e_SIS(i,:)-e_mean_SIS(i))/N_essaie;
-end
-
-%l=length(N_set)+1; %full N_set
-l=length(N_set); %doesn't show the N=5000 point
-plot(N_set(1:l-1),e_mean_SIS(1:l-1),'b',...
-    N_set(1:l-1),(e_mean_SIS(1:l-1)-(1.96*sqrt(e_var_SIS(1:l-1)/N_essaie))),'--r',...
-    N_set(1:l-1),e_mean_SIS(1:l-1)+(1.96*sqrt(e_var_SIS(1:l-1)/N_essaie)),'--r');
-
-%% error tests adaptatif
-
-N_set = 100:50:1000;
-C_set=0:0.2:1;
-N_essaie=50;
-e_adap=zeros(length(N_set),length(C_set),N_essaie);
-e_mean_adap=zeros(length(C_set),length(N_set));
-e_var_adap=zeros(length(C_set),length(N_set));
-seed=rng;
-for n=1:length(N_set)
-    N=N_set(n);
-    for c=1:length(C_set) 
-        C=C_set(c);
-        rng(seed); %set back to the same random queue 
-        for j=1:N_essaie
-            [swag,swag2] = adaptatif(delta,sigma_INS,sigma_BAR,sigma_ALT,r_0,v_0,r_INS,v_INS,T,N,map,h_ALT,C);
-
-            test_hat = zeros(4,T);
-
-            for t=1:T
-               test_hat(:,t) = swag(:,:,t)*swag2(:,t); 
-            end
-
-            rhat=test_hat(1:2,:);
-            e_adap(n,c,j)=error_pred( rtrue,rhat,T );
-        end
-        e_mean_adap(c,n)=sum(e_adap(n,c,:))/N_essaie;
-        e_var_adap(c,n)=dot(e_adap(n,c,:)-e_mean_adap(c,n),e_adap(n,c,:)-e_mean_adap(c,n))/N_essaie;
-    end
-end
-
-%dans nct, j'ai ajouté les matrices des experiences avec N_essaye=50,
-%si tu veux relance avec un plus grands N_essaye sur les pc de l'ensta 3:) 
-load('nct/e_adap.mat');
-for n=1:length(N_set)
-    for c=1:length(C_set) 
-        e_mean_adap(c,n)=sum(e_adap(n,c,:))/N_essaie;
-        e_var_adap(c,n)=dot(e_adap(n,c,:)-e_mean_adap(c,n),e_adap(n,c,:)-e_mean_adap(c,n))/N_essaie;
-    end
-end
-%manque d'afficher e_mean_adap et e_var_adap ... essaye avec HeatMap si tu peux :), 
-%j'ai pas sue bien utiliser le parametre colormap
+ end
