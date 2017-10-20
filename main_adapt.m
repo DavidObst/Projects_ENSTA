@@ -1,11 +1,11 @@
 clear
 
-N = 300; %% Nombre de particules
+N = 100; %% Nombre de particules
 Nb = 10;
 lambda = 20;
 %c = [500,200,2];
 %c = [300,400,100];
-c = [300,400,100];
+c = [300,300,2];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -74,7 +74,6 @@ C = diag(c);
  s0 = 100; %% Pourcentage initial
  
  %% Coordonees : [x,y,s] %%
- %X0 = normrnd([pos0,s0],sigma0,[3,N]);
  X0 = [pos0;s0];
  Xi_k = zeros(3,N,T);
  Xi_k(:,:,1) = mvnrnd(X0,sigma0*Id,N)';
@@ -90,70 +89,96 @@ C = diag(c);
  end
  
  
- %u0 =  rect0(1,:) - pos0';
- %v0 = rect0(2,:) - pos0';
+ c_adapt = 0.7 ;
+ N_eff = 1/dot(w(:,1),w(:,1));
+ 
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
   
  while tt<T %%Tant que le film n est pas termine
      tt = tt+1;
+     im = imread([SEQUENCE filenames{tt}]);
+     
+     if N_eff<= c_adapt*N %% Reechantillonage: SIR
 	 
-	 %% Lecture de l'image
-	 im = imread([SEQUENCE filenames{tt}]);
-     
-	Xi_tempo = fct_multi(Xi_k(:,:,tt-1),w(:,tt-1)',N);
-    
-	%% Update at step k %%
-     
-     for i=1:N
-         
-        U = mvnrnd([0,0,0],C);
-        Xi_k(:,i,tt) = Xi_tempo(:,i) + U';
-        
-        zone_tt(tt,i,:) = transforme(zoneAT,X0',Xi_k(:,i,tt)');
-        
-        
-        impart = imcrop(im,zone_tt(tt,i,:));
-         impart = rgb2ind(impart,Cmap,'nodither');
-         histo = imhist(impart,Cmap);
-         histo = histo/sum(histo);
-         
-         if isempty(impart) %% If particle out of screen : set its weight to 0
-             w(i,tt) = 0;
-         else
-             w(i,tt) = vraisemblance(histoRef,histo,lambda);
+         %% Lecture de l'image
+
+        Xi_tempo = fct_multi(Xi_k(:,:,tt-1),w(:,tt-1)',N);
+
+        %% Update at step k %%
+
+         for i=1:N
+
+            U = mvnrnd([0,0,0],C);
+            Xi_k(:,i,tt) = Xi_tempo(:,i) + U';
+
+            zone_tt(tt,i,:) = transforme(zoneAT,X0',Xi_k(:,i,tt)');
+
+
+            impart = imcrop(im,zone_tt(tt,i,:));
+            impart = rgb2ind(impart,Cmap,'nodither');
+             
+             
+            if ~isempty(impart)
+                 histo = imhist(impart,Cmap);
+                 histo = histo/sum(histo);
+                 w(i,tt) = vraisemblance(histoRef,histo,lambda);              
+            else
+                 w(i,tt) = 0;
+            end
+
+
          end
-                  
+         
+     else %% Pas de reechantillonage: SIS
         
+         for i=1:N
+
+            U = mvnrnd([0,0,0],C);
+            Xi_k(:,i,tt) = Xi_k(:,i,tt-1) + U';
+            
+            zone_tt(tt,i,:) = transforme(zoneAT,X0',Xi_k(:,i,tt)');
+
+
+            impart = imcrop(im,zone_tt(tt,i,:));
+            impart = rgb2ind(impart,Cmap,'nodither');
+             
+            if ~isempty(impart) %% Si le rectangle est bien dans l'image
+                 histo = imhist(impart,Cmap);
+                 histo = histo/sum(histo);
+                 w(i,tt) = w(i,tt-1)*vraisemblance(histoRef,histo,lambda);
+                 
+            else %%Si la particule sort: inutile => poids a 0
+                 w(i,tt) = 0; 
+            end
+
+
+         end
+         
      end
-     
-     %pos_hat(tt,1:2) =  Xi_k(1:2,:,tt)'*w(1:2,tt);
-     
-     
-     %rectangle('Position',zone_tt(tt,i,:),'EdgeColor','r','LineWidth',3);
-     %figure;
-     %set(gcf,'DoubleBuffer','on');
-     %imagesc(im);
      
      w(:,tt) = w(:,tt)/sum(w(:,tt));
      
-     pos_hat(tt,1) = Xi_k(1,:,tt)*w(:,tt) ;
-     pos_hat(tt,2) = Xi_k(2,:,tt)*w(:,tt) ;
-     pos_hat(tt,3) = Xi_k(3,:,tt)*w(:,tt) ;
+     N_eff = 1/dot(w(:,tt),w(:,tt));
+     
+     %% Calcul de la position moyenne %%
+     pos_hat(tt,:) = Xi_k(:,:,tt)*w(:,tt) ;
      
      zone_hat(tt,:) = transforme(zoneAT,X0',pos_hat(tt,:));
      
-     %figure
-     clf;
+     figure
+     %clf;
      imagesc(im)
+     title(['N_{eff} =' num2str(N_eff) '; cN =' num2str(c_adapt*N) ])
      hold on
     %scatter(pos_hat(tt,1),pos_hat(tt,2));
-    scatter(Xi_k(1,:,tt),Xi_k(2,:,tt));
+    %scatter(Xi_k(1,:,tt),Xi_k(2,:,tt),10,'MarkerFaceColor',[0.17 0.17 0.17]);
     
     rectangle('Position',zone_hat(tt,:),'EdgeColor','r','LineWidth',3);
     %for i=1:N
      %   rectangle('Position',zone_tt(tt,i,:),'EdgeColor','blue','LineWidth',1);
     %end
-    drawnow;
+    %drawnow;
+    
 
  end
